@@ -14,6 +14,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var fileFormatTip string = `
+
+配置文件格式：
+
+user:
+	name: 自定义
+	token: 效能平台 token                   // 有效期 7 天，如果无法正常获取日志请尝试更换
+
+envs:
+	-
+		alias: wk_tag_manage               // 日志来源，自定义
+		deployment: wk-tag-manage          // deployment 名
+		name: wk-tag-manage                // pod 名
+		type: api                          // api [服务] or script[脚本]
+		namespace: dev1                    // 命名空间
+	-
+		alias: tag-record-subscriber
+		deployment: wk-tag-manage
+		name: wk-tag-manage-tag-record-subscriber
+		type: script
+		namespace: dev1
+`
+
 type User struct {
 	Name  string	`yaml:"name"`
 	Token string	`yaml:"token"`
@@ -33,6 +56,14 @@ type Conf struct {
 		EnvMap  map[string]*Env
 }
 
+func getAllAlias(c *Conf) []string {
+	aliases := make([]string, len(c.EnvMap))
+	for k := range c.EnvMap {
+		aliases = append(aliases, k)
+	}
+	return aliases
+}
+
 func getConf() *Conf {
 	home := os.Getenv("HOME")
 	if len(home) == 0 {
@@ -41,12 +72,14 @@ func getConf() *Conf {
 
 	yamlFile, err := ioutil.ReadFile(home + "/.kkconf.yaml")
     if err != nil {
+		fmt.Println(`解析配置文件失败，请检查 $HOME/.kkconf.yaml 是否存在` + fileFormatTip)
         panic("yamlFile.Get err: " + err.Error())
     }
 
 	c := Conf{}
     err = yaml.Unmarshal(yamlFile, &c)
     if err != nil {
+		fmt.Println(`解析配置文件失败，请检查格式是否正确` + fileFormatTip)
         panic("yaml.Unmarshal err: " + err.Error())
     }
 
@@ -66,12 +99,14 @@ func main() {
 	flag.StringVar(&alias, "alias", "", "alias of env in kkconfig")
 	flag.Parse()
 
+	conf := getConf()
+
 	if len(alias) == 0 && len(flag.Args()) > 0 {
 			alias = flag.Args()[0]
 	}
 
 	if len(alias) == 0 {
-		fmt.Println("未指定日志来源")
+		fmt.Println("未指定日志来源，可用来源：", getAllAlias(conf))
 		return
 	}
 
@@ -85,8 +120,6 @@ func main() {
 	// 计时器 定时回复消息
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
-
-	conf := getConf()
 
 	_, ok := conf.EnvMap[alias]
 	if !ok {
