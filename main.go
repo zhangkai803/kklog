@@ -96,7 +96,7 @@ func main() {
 	log.SetFlags(0)
 
 	var alias string
-	flag.StringVar(&alias, "alias", "", "配置文件中的别名/Alias of env in $HOME/.kkconfig.yaml")
+	flag.StringVar(&alias, "alias", "", "日志来源，即配置文件中的别名/Alias of env in $HOME/.kkconfig.yaml")
 	flag.Parse()
 
 	conf := getConf()
