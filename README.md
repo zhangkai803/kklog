@@ -36,3 +36,23 @@
 ```sh
 make && make install
 ```
+
+3. 使用
+
+- 帮助信息
+
+    ```sh
+    kklog -h
+    ```
+
+- 查看日志
+
+    ```sh
+    kklog [配置文件中的别名]
+    ```
+
+    或者
+
+    ```sh
+    kklog -alias [配置文件中的别名]
+    ```
