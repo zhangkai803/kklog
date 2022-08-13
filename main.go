@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -33,15 +34,20 @@ type Conf struct {
 }
 
 func getConf() *Conf {
-	yamlFile, err := ioutil.ReadFile("~/.kkconf.yaml")
+	home := os.Getenv("HOME")
+	if len(home) == 0 {
+		panic("HOME is not set")
+	}
+
+	yamlFile, err := ioutil.ReadFile(home + "/.kkconf.yaml")
     if err != nil {
-        log.Printf("yamlFile.Get err   #%v ", err)
+        panic("yamlFile.Get err: " + err.Error())
     }
 
 	c := Conf{}
     err = yaml.Unmarshal(yamlFile, &c)
     if err != nil {
-        log.Fatalf("Unmarshal: %v", err)
+        panic("yaml.Unmarshal err: " + err.Error())
     }
 
 	envMap := map[string]*Env{}
@@ -57,8 +63,17 @@ func main() {
 	log.SetFlags(0)
 
 	var alias string
-	flag.StringVar(&alias, "alias", "wk_tag_manage", "alias of env in kkconfig")
+	flag.StringVar(&alias, "alias", "", "alias of env in kkconfig")
 	flag.Parse()
+
+	if len(alias) == 0 && len(flag.Args()) > 0 {
+			alias = flag.Args()[0]
+	}
+
+	if len(alias) == 0 {
+		fmt.Println("未指定日志来源")
+		return
+	}
 
 	// 监听主动退出信号
 	interrupt := make(chan os.Signal, 1)
@@ -72,6 +87,12 @@ func main() {
 	defer ticker.Stop()
 
 	conf := getConf()
+
+	_, ok := conf.EnvMap[alias]
+	if !ok {
+		fmt.Println("日志来源[" + alias + "]未定义，请检查")
+		return
+	}
 
 	// 组装地址
 	args := []string{
