@@ -16,7 +16,7 @@
         name: kk
         token: xxx.yyy.zzz
 
-        envs:
+    envs:
         -
             alias: wk_tag_manage
             deployment: wk-tag-manage
