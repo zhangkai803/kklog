@@ -18,13 +18,13 @@
 
     envs:
         -
-            alias: wk_tag_manage
+            source: wk_tag_manage
             deployment: wk-tag-manage
             name: wk-tag-manage
             type: api
             namespace: dev1
         -
-            alias: tag-record-subscriber
+            source: tag-record-subscriber
             deployment: wk-tag-manage
             name: wk-tag-manage-tag-record-subscriber
             type: script
