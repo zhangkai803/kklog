@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -11,103 +10,53 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"gopkg.in/yaml.v3"
 )
 
-var fileFormatTip string = `
-
-配置文件格式：
-
-user:
-	name: 自定义
-	token: 效能平台 token                   // 有效期 7 天，如果无法正常获取日志请尝试更换
-
-envs:
-	-
-		alias: wk_tag_manage               // 日志来源，自定义
-		deployment: wk-tag-manage          // deployment 名
-		name: wk-tag-manage                // pod 名
-		type: api                          // api [服务] or script[脚本]
-		namespace: dev1                    // 命名空间
-	-
-		alias: tag-record-subscriber
-		deployment: wk-tag-manage
-		name: wk-tag-manage-tag-record-subscriber
-		type: script
-		namespace: dev1
-`
-
-type User struct {
-	Name  string	`yaml:"name"`
-	Token string	`yaml:"token"`
-}
-
-type Env struct {
-	Alias 		string	`yaml:"alias"`
-	Deployment 	string	`yaml:"deployment"`
-	Name 		string	`yaml:"name"`
-	Namespace	string	`yaml:"namespace"`
-	Type 		string	`yaml:"type"`
-}
-
-type Conf struct {
-        User	*User			`yaml:"user"`
-        Envs	[]*Env			`yaml:"envs"`
-		EnvMap  map[string]*Env
-}
-
-func getAllAlias(c *Conf) []string {
-	aliases := make([]string, len(c.EnvMap))
+func getAllSources(c *Conf) []string {
+	sources := make([]string, len(c.EnvMap))
 	for k := range c.EnvMap {
-		aliases = append(aliases, k)
+		sources = append(sources, k)
 	}
-	return aliases
+	return sources
 }
 
-func getConf() *Conf {
-	home := os.Getenv("HOME")
-	if len(home) == 0 {
-		panic("HOME is not set")
+func handleMessage(c *websocket.Conn) bool {
+	_, message, err := c.ReadMessage()
+	if err != nil {
+		log.Println("read:", err)
+		return false
 	}
-
-	yamlFile, err := ioutil.ReadFile(home + "/.kkconf.yaml")
-    if err != nil {
-		fmt.Println(`解析配置文件失败，请检查 $HOME/.kkconf.yaml 是否存在` + fileFormatTip)
-        panic("yamlFile.Get err: " + err.Error())
-    }
-
-	c := Conf{}
-    err = yaml.Unmarshal(yamlFile, &c)
-    if err != nil {
-		fmt.Println(`解析配置文件失败，请检查格式是否正确` + fileFormatTip)
-        panic("yaml.Unmarshal err: " + err.Error())
-    }
-
-	envMap := map[string]*Env{}
-	for _, e := range c.Envs {
-		envMap[e.Alias] = e
+	messageStr := string(message)
+	if strings.Index(messageStr, "Invalid HTTP request received.") != -1 {
+		return true
 	}
-
-	c.EnvMap = envMap
-	return &c
+	log.Print(messageStr)
+	return true
 }
 
 func main() {
 	log.SetFlags(0)
+	conf := initConf()
 
-	var alias string
-	flag.StringVar(&alias, "alias", "", "日志来源，即配置文件中的别名/Alias of env in $HOME/.kkconfig.yaml")
+	source := flag.String("s", "wcm", fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, getAllSources(conf)))
+	namespace := flag.String("ns", "", "命名空间：如dev1,不指定默认使用配置文件里的namespace")
+	numberOfLines := flag.Int("n", -1, "显示多少行")
+	addEnvFlag := flag.Bool("a", false, "新增项目")
+	refreshTokenFlag := flag.Bool("f", false, "刷新token")
+
 	flag.Parse()
 
-	conf := getConf()
-
-	if len(alias) == 0 && len(flag.Args()) > 0 {
-			alias = flag.Args()[0]
+	if len(os.Args) < 1 {
+		flag.Usage()
+		os.Exit(1)
 	}
 
-	if len(alias) == 0 {
-		fmt.Println("未指定日志来源，可用来源：", getAllAlias(conf))
-		return
+	if *addEnvFlag == true {
+		addEnv()
+	}
+
+	if *refreshTokenFlag == true {
+		refreshToken()
 	}
 
 	// 监听主动退出信号
@@ -121,12 +70,14 @@ func main() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	_, ok := conf.EnvMap[alias]
+	_, ok := conf.EnvMap[*source]
 	if !ok {
-		fmt.Println("日志来源[" + alias + "]未定义，请检查")
+		log.Printf(`日志来源[" %v "]未定义，请检查`, *source)
 		return
 	}
-
+	if *namespace == "" {
+		*namespace = conf.EnvMap[*source].Namespace
+	}
 	// 组装地址
 	args := []string{
 		"container=app",
@@ -137,33 +88,49 @@ func main() {
 		"tailLines=500",
 		"proj_id=1",
 		"token=" + conf.User.Token,
-		"namespace=" + conf.EnvMap[alias].Namespace,
-		"label=app=" + conf.EnvMap[alias].Deployment +  ",cicd_env=stable,name=" + conf.EnvMap[alias].Name + ",type=" + conf.EnvMap[alias].Type + ",version=stable",
+		"namespace=" + *namespace,
+		"label=app=" + conf.EnvMap[*source].Deployment + ",cicd_env=stable,name=" + conf.EnvMap[*source].Name + ",type=" + conf.EnvMap[*source].Type + ",version=stable",
 	}
 
-	var link string = `wss://value.weike.fm/ws/api/k8s/dev/pods/log`
+	var link = `wss://value.weike.fm/ws/api/k8s/dev/pods/log`
 	link += "?" + strings.Join(args, "&")
-
-	log.Printf("connecting to %s", link)
-
+	log.Printf("Connecting:[%s]\nNamespace:[%s]\n", *source, *namespace)
 	// 建立 ws 连接
 	c, _, err := websocket.DefaultDialer.Dial(link, nil)
 	if err != nil {
-		log.Fatal("dial:", err)
+		log.Printf("ConnectionError!Please check your network or refresh token.\n")
+		os.Exit(-1)
 	}
-	defer c.Close()
+	defer func(c *websocket.Conn) {
+		err := c.Close()
+		if err != nil {
+			fmt.Println("Close websocket error", err)
+		}
+	}(c)
 
-	// gorotine 读取消息
+	// goroutine 读取消息
 	go func() {
 		defer close(done)
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				return
+		if *numberOfLines != -1 {
+			for {
+				if *numberOfLines == -1 {
+					os.Exit(0)
+				}
+				r := handleMessage(c)
+				if !r {
+					break
+				}
+				*numberOfLines = *numberOfLines - 1
 			}
-			log.Print(string(message))
+		} else {
+			for {
+				r := handleMessage(c)
+				if !r {
+					break
+				}
+			}
 		}
+
 	}()
 
 	// 监听信号
