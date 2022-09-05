@@ -13,7 +13,7 @@ import (
 )
 
 func getAllSources(c *Conf) []string {
-	sources := make([]string, len(c.EnvMap))
+	sources := make([]string, 0)
 	for k := range c.EnvMap {
 		sources = append(sources, k)
 	}
@@ -27,7 +27,7 @@ func handleMessage(c *websocket.Conn) bool {
 		return false
 	}
 	messageStr := string(message)
-	if strings.Index(messageStr, "Invalid HTTP request received.") != -1 {
+	if strings.Contains(messageStr, "Invalid HTTP request received.") {
 		return true
 	}
 	log.Print(messageStr)
@@ -37,25 +37,30 @@ func handleMessage(c *websocket.Conn) bool {
 func main() {
 	log.SetFlags(0)
 	conf := initConf()
+	sources := getAllSources(conf)
+	defaultSource := ""
 
-	source := flag.String("s", "wcm", fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, getAllSources(conf)))
-	namespace := flag.String("ns", "", "命名空间：如dev1,不指定默认使用配置文件里的namespace")
+	if len(sources) > 0 {
+		defaultSource = sources[0]
+	}
+
+	source := flag.String("s", defaultSource, fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
+	namespace := flag.String("ns", "", "命名空间：如 dev1,不指定默认使用配置文件里的 namespace")
 	numberOfLines := flag.Int("n", -1, "显示多少行")
 	addEnvFlag := flag.Bool("a", false, "新增项目")
-	refreshTokenFlag := flag.Bool("f", false, "刷新token")
+	refreshTokenFlag := flag.Bool("f", false, "刷新 token")
 
 	flag.Parse()
-
-	if len(os.Args) < 1 {
+	if len(os.Args) < 2 {
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	if *addEnvFlag == true {
+	if *addEnvFlag {
 		addEnv()
 	}
 
-	if *refreshTokenFlag == true {
+	if *refreshTokenFlag {
 		refreshToken()
 	}
 
@@ -72,7 +77,7 @@ func main() {
 
 	_, ok := conf.EnvMap[*source]
 	if !ok {
-		log.Printf(`日志来源[" %v "]未定义，请检查`, *source)
+		log.Printf(`日志来源[ %v ]未定义，请检查`, *source)
 		return
 	}
 	if *namespace == "" {
