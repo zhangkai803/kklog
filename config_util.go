@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"os"
 	"os/exec"
 	"reflect"
 	"runtime"
+
+	"gopkg.in/yaml.v3"
 )
 
 const ConfigPath = "/.kkconf.yaml"
@@ -18,11 +19,11 @@ type User struct {
 }
 
 type Env struct {
-	Source     string `yaml:"source"`
-	Deployment string `yaml:"deployment"`
-	Name       string `yaml:"name"`
-	Namespace  string `yaml:"namespace"`
-	Type       string `yaml:"type"`
+	Source     string `yaml:"source" desc:"自定义配置名"`
+	Deployment string `yaml:"deployment" desc:"服务名称"`
+	Name       string `yaml:"name" desc:"POD 名称"`
+	Namespace  string `yaml:"namespace" desc:"命名空间"`
+	Type       string `yaml:"type" desc:"服务类型[api/script]"`
 }
 
 type Conf struct {
@@ -105,9 +106,9 @@ func addEnv() {
 	s := reflect.ValueOf(&env).Elem() // 反射获取测试对象对应的struct枚举类型
 
 	for i := 0; i < num; i++ {
-		key := typeInfo.Field(i).Name
+		field := typeInfo.Field(i)
 		var v string
-		fmt.Printf(`%s:`, key)
+		fmt.Printf(`%s %s:`, field.Name, field.Tag.Get("desc"))
 		_, err := fmt.Scanln(&v)
 		handleError(err)
 		s.Field(i).SetString(v)
