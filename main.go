@@ -27,7 +27,7 @@ func handleMessage(c *websocket.Conn) bool {
 		return false
 	}
 	messageStr := string(message)
-	if strings.Contains(messageStr, "Invalid HTTP request received.") {
+	if strings.Contains(messageStr, "Invalid HTTP request received.") || strings.Contains(messageStr, "GET /metrics HTTP") || strings.Contains(messageStr, "GET /health_check HTTP") {
 		return true
 	}
 	log.Print(messageStr)
@@ -76,13 +76,13 @@ func main() {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	_, ok := conf.EnvMap[*source]
+	curConf, ok := conf.EnvMap[*source]
 	if !ok {
 		log.Printf(`日志来源[ %v ]未定义，请检查`, *source)
 		return
 	}
 	if *namespace == "" {
-		*namespace = conf.EnvMap[*source].Namespace
+		*namespace = curConf.Namespace
 	}
 	// 组装地址
 	args := []string{
@@ -95,7 +95,7 @@ func main() {
 		"proj_id=1",
 		"token=" + conf.User.Token,
 		"namespace=" + *namespace,
-		"label=app=" + conf.EnvMap[*source].Deployment + ",cicd_env=stable,name=" + conf.EnvMap[*source].Name + ",type=" + conf.EnvMap[*source].Type + ",version=stable",
+		"label=app=" + curConf.Deployment + ",cicd_env=stable,name=" + curConf.Name + ",type=" + curConf.Type + ",version=stable",
 	}
 
 	var link = `wss://value.weike.fm/ws/api/k8s/` + *env + `/pods/log`
