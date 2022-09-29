@@ -49,6 +49,7 @@ func main() {
 	numberOfLines := flag.Int("n", -1, "显示多少行")
 	addEnvFlag := flag.Bool("a", false, "新增项目")
 	refreshTokenFlag := flag.Bool("f", false, "刷新 token")
+	env := flag.String("e", "dev", "环境选择：dev | prod")
 
 	flag.Parse()
 	if len(os.Args) < 2 {
@@ -97,9 +98,9 @@ func main() {
 		"label=app=" + conf.EnvMap[*source].Deployment + ",cicd_env=stable,name=" + conf.EnvMap[*source].Name + ",type=" + conf.EnvMap[*source].Type + ",version=stable",
 	}
 
-	var link = `wss://value.weike.fm/ws/api/k8s/dev/pods/log`
+	var link = `wss://value.weike.fm/ws/api/k8s/` + *env + `/pods/log`
 	link += "?" + strings.Join(args, "&")
-	log.Printf("Connecting:[%s]\nNamespace:[%s]\n", *source, *namespace)
+	log.Printf("Connecting:[%s]\nNamespace:[%s]\nLink:[%s]", *source, *namespace, link)
 	// 建立 ws 连接
 	c, _, err := websocket.DefaultDialer.Dial(link, nil)
 	if err != nil {
