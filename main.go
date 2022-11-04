@@ -27,7 +27,7 @@ func handleMessage(c *websocket.Conn) bool {
 		return false
 	}
 	messageStr := string(message)
-	if strings.Contains(messageStr, "Invalid HTTP request received.") || strings.Contains(messageStr, "GET /metrics HTTP") || strings.Contains(messageStr, "GET /health_check HTTP") {
+	if strings.Contains(messageStr, "Invalid HTTP request received.") || strings.Contains(messageStr, "GET /metrics HTTP") || strings.Contains(messageStr, "GET /health_check") {
 		return true
 	}
 	log.Print(messageStr)
