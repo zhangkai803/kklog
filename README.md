@@ -56,3 +56,9 @@ make && make install
     ```sh
     kklog -alias [配置文件中的别名]
     ```
+
+    或者
+
+    ```sh
+    kklog -d wk-miniprogram-cms -e prod -n wk-miniprogram-cms-auto-scheduler -ns iprod -t script
+    ```

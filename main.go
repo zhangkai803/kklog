@@ -44,12 +44,15 @@ func main() {
 		defaultSource = sources[0]
 	}
 
-	source := flag.String("s", defaultSource, fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
-	namespace := flag.String("ns", "", "命名空间：如 dev1,不指定默认使用配置文件里的 namespace")
-	numberOfLines := flag.Int("n", -1, "显示多少行")
 	addEnvFlag := flag.Bool("a", false, "新增项目")
-	refreshTokenFlag := flag.Bool("f", false, "刷新 token")
+	deployment := flag.String("d", "", "项目名")
 	env := flag.String("e", "dev", "环境选择：dev | prod")
+	numberOfLines := flag.Int("l", -1, "显示多少行")
+	name := flag.String("n", "", "服务名")
+	namespace := flag.String("ns", "", "命名空间：如 dev1")
+	refreshTokenFlag := flag.Bool("r", false, "刷新 token")
+	source := flag.String("s", defaultSource, fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
+	_type := flag.String("t", "api", "服务类型: api | script")
 
 	flag.Parse()
 	if len(os.Args) < 2 {
@@ -79,11 +82,22 @@ func main() {
 	curConf, ok := conf.EnvMap[*source]
 	if !ok {
 		log.Printf(`日志来源[ %v ]未定义，请检查`, *source)
-		return
+		curConf = &Env{}
 	}
-	if *namespace == "" {
-		*namespace = curConf.Namespace
+
+	if *namespace != "" {
+		curConf.Namespace = *namespace
 	}
+	if *deployment != "" {
+		curConf.Deployment = *deployment
+	}
+	if *name != "" {
+		curConf.Name = *name
+	}
+	if *_type != "" {
+		curConf.Type = *_type
+	}
+
 	// 组装地址
 	args := []string{
 		"container=app",
@@ -94,7 +108,7 @@ func main() {
 		"tailLines=500",
 		"proj_id=1",
 		"token=" + conf.User.Token,
-		"namespace=" + *namespace,
+		"namespace=" + curConf.Namespace,
 		"label=app=" + curConf.Deployment + ",cicd_env=stable,name=" + curConf.Name + ",type=" + curConf.Type + ",version=stable",
 	}
 
