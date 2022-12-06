@@ -47,7 +47,7 @@ func main() {
 	addEnvFlag := flag.Bool("a", false, "新增项目")
 	deployment := flag.String("d", "", "项目名")
 	env := flag.String("e", "dev", "环境选择：dev | prod")
-	numberOfLines := flag.Int("l", -1, "显示多少行")
+	tailLines := flag.String("l", "500", "tail行数")
 	name := flag.String("n", "", "服务名")
 	namespace := flag.String("ns", "", "命名空间：如 dev1")
 	refreshTokenFlag := flag.Bool("r", false, "刷新 token")
@@ -105,7 +105,7 @@ func main() {
 		"previous=false",
 		"timestamps=true",
 		"prefix=false",
-		"tailLines=500",
+		"tailLines=" + *tailLines,
 		"proj_id=1",
 		"token=" + conf.User.Token,
 		"namespace=" + curConf.Namespace,
@@ -131,26 +131,12 @@ func main() {
 	// goroutine 读取消息
 	go func() {
 		defer close(done)
-		if *numberOfLines != -1 {
-			for {
-				if *numberOfLines == -1 {
-					os.Exit(0)
-				}
-				r := handleMessage(c)
-				if !r {
-					break
-				}
-				*numberOfLines = *numberOfLines - 1
-			}
-		} else {
-			for {
-				r := handleMessage(c)
-				if !r {
-					break
-				}
+		for {
+			r := handleMessage(c)
+			if !r {
+				break
 			}
 		}
-
 	}()
 
 	// 监听信号
