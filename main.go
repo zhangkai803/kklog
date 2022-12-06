@@ -115,7 +115,7 @@ func main() {
 
 	var link = `wss://value.weike.fm/ws/api/k8s/` + *env + `/pods/log`
 	link += "?" + strings.Join(args, "&")
-	log.Printf("Connecting:[%s]\nNamespace:[%s]\nLink:[%s]", *source, *namespace, link)
+	log.Printf("Connecting:[%s]\nNamespace:[%s]\nLink:[%s]", *source, curConf.Namespace, link)
 	// 建立 ws 连接
 	c, resp, err := websocket.DefaultDialer.Dial(link, nil)
 	if err != nil {
