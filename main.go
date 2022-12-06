@@ -46,6 +46,7 @@ func main() {
 
 	addEnvFlag := flag.Bool("a", false, "新增项目")
 	deployment := flag.String("d", "", "项目名")
+	debug := flag.Bool("debug", false, "是否DEBUG")
 	env := flag.String("e", "dev", "环境选择：dev | prod")
 	tailLines := flag.String("l", "500", "tail行数")
 	name := flag.String("n", "", "服务名")
@@ -116,7 +117,7 @@ func main() {
 	link += "?" + strings.Join(args, "&")
 	log.Printf("Connecting:[%s]\nNamespace:[%s]\nLink:[%s]", *source, *namespace, link)
 	// 建立 ws 连接
-	c, _, err := websocket.DefaultDialer.Dial(link, nil)
+	c, resp, err := websocket.DefaultDialer.Dial(link, nil)
 	if err != nil {
 		log.Printf("ConnectionError!Please check your network or refresh token.\n")
 		os.Exit(-1)
@@ -127,6 +128,11 @@ func main() {
 			fmt.Println("Close websocket error", err)
 		}
 	}(c)
+
+	if *debug {
+		log.Printf("Connect resp: %v\n", resp.Status)
+		os.Exit(1)
+	}
 
 	// goroutine 读取消息
 	go func() {
