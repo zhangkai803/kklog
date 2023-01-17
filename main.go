@@ -99,7 +99,7 @@ func main() {
     if *name != "" {
         curConf.Name = *name
     }
-    if *_type != "" {
+    if curConf.Type == "" {
         curConf.Type = *_type
     }
 
