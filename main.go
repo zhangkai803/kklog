@@ -15,8 +15,8 @@ import (
 
 func getAllSources(c *Conf) []string {
     sources := make([]string, 0)
-    for k := range c.EnvMap {
-        sources = append(sources, k)
+    for k := range c.Envs {
+        sources = append(sources, c.Envs[k].Source)
     }
     return sources
 }
@@ -42,7 +42,9 @@ func main() {
     sources := getAllSources(conf)
     defaultSource := ""
 
-    if len(sources) > 0 {
+    if conf.DefaultSource != "" {
+        defaultSource = conf.DefaultSource
+    } else if len(sources) > 0 {
         defaultSource = sources[0]
     }
 
