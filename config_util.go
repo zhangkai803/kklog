@@ -30,6 +30,7 @@ type Conf struct {
     User   *User  `yaml:"user"`
     Envs   []*Env `yaml:"envs"`
     EnvMap map[string]*Env
+    DefaultSource string `yaml:"default_source"`
 }
 
 var fileFormatTip string = `
@@ -53,6 +54,9 @@ envs:
         name: wk-tag-manage-tag-record-subscriber
         type: script
         namespace: dev1
+
+# 此处配置默认抓取的日志来源 为空默认为envs[0]
+default_source: ""
 `
 
 var emptyConf string = `
@@ -81,6 +85,9 @@ envs:
         name: wk-tag-manage-subscriber
         type: script
         namespace: dev1
+
+# 此处配置默认抓取的日志来源 为空默认为envs[0]
+default_source: ""
 `
 
 func getHome() string {
