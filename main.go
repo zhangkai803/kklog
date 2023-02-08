@@ -40,13 +40,6 @@ func main() {
     log.SetFlags(0)
     conf := initConf()
     sources := getAllSources(conf)
-    defaultSource := ""
-
-    if conf.DefaultSource != "" {
-        defaultSource = conf.DefaultSource
-    } else if len(sources) > 0 {
-        defaultSource = sources[0]
-    }
 
     addEnvFlag := flag.Bool("a", false, "新增项目")
     deployment := flag.String("d", "", "项目名")
@@ -56,7 +49,7 @@ func main() {
     name := flag.String("n", "", "服务名")
     namespace := flag.String("ns", "", "命名空间：如 dev1")
     refreshTokenFlag := flag.Bool("r", false, "刷新 token")
-    source := flag.String("s", defaultSource, fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
+    source := flag.String("s", "", fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
     _type := flag.String("t", "api", "服务类型: api | script")
 
     flag.Parse()
@@ -86,9 +79,17 @@ func main() {
     ticker := time.NewTicker(time.Second)
     defer ticker.Stop()
 
-    curConf, ok := conf.EnvMap[*source]
-    if !ok {
-        log.Printf(`日志来源[ %v ]未定义，请检查\n`, *source)
+    var curConf *Env
+    var ok bool
+    if len(*source) > 0 {
+        // 传入日志源
+        curConf, ok = conf.EnvMap[*source]
+        if !ok {
+            log.Printf(`日志来源[ %v ]未定义，请检查\n`, *source)
+            os.Exit(0)
+        }
+    } else {
+        // 未传日志源
         curConf = &Env{}
     }
 
@@ -146,7 +147,7 @@ func main() {
 
     if *debug {
         log.Printf("Connect resp: %v\n", resp.Status)
-        os.Exit(1)
+        os.Exit(0)
     }
 
     // goroutine 读取消息
