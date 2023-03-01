@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"runtime"
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -183,6 +184,11 @@ func addEnv() {
 }
 
 func refreshToken() {
+    osName := runtime.GOOS
+    if osName != "darwin" {
+        fmt.Println("Not Supported.")
+        os.Exit(-1)
+    }
     db, err := sql.Open("sqlite3", "/Users/k/Library/Application Support/Google/Chrome/Profile 1/Cookies")
 	if err != nil {
 		log.Fatal(err)
