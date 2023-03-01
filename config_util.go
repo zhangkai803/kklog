@@ -1,13 +1,29 @@
 package main
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha1"
+	"database/sql"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"reflect"
-	"runtime"
+	"strings"
+
+	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/pbkdf2"
 
 	"gopkg.in/yaml.v3"
+)
+
+var (
+	SALT       = "saltysalt"
+	ITERATIONS = 1003
+	KEYLENGTH  = 16
 )
 
 const ConfigPath = "/.kkconf.yaml"
@@ -167,22 +183,32 @@ func addEnv() {
 }
 
 func refreshToken() {
-    osName := runtime.GOOS
-    var cmd *exec.Cmd
-    if osName == "darwin" {
-        cmd = exec.Command("sh", "-c", fmt.Sprintf(`open %s`, TokenRefreshUrl))
-    } else if osName == "linux" {
-        cmd = exec.Command("sh", "-c", fmt.Sprintf(`xdg-open %s`, TokenRefreshUrl))
-    } else {
-        fmt.Println("Not Supported.")
-        os.Exit(-1)
-    }
-    err := cmd.Run()
-    handleError(err)
+    db, err := sql.Open("sqlite3", "/Users/k/Library/Application Support/Google/Chrome/Profile 1/Cookies")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	rows, err := db.Query("select encrypted_value from cookies c where host_key = \"value.weike.fm\" and name = \"value_token\"")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
     var token string
-    fmt.Printf(`Please Enter Your Token:`)
-    _, err = fmt.Scanln(&token)
-    handleError(err)
+    for rows.Next() {
+		var encrypted_value []byte
+		err = rows.Scan(&encrypted_value)
+		if err != nil {
+			log.Fatal(err)
+		}
+        iv := []byte{32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32}
+        key, err := GetMasterKey()
+        if err != nil {
+            log.Fatal(err)
+        }
+        value, err := aes128CBCDecrypt(key, iv, encrypted_value[3:])
+        token = string(value)
+	}
     conf := GetConf()
     conf.User.Token = token
     marshal, err := yaml.Marshal(conf)
@@ -190,4 +216,74 @@ func refreshToken() {
     err = os.WriteFile(getHome()+ConfigPath, marshal, 0777)
     handleError(err)
     fmt.Printf("Successfully refreshed token!\n")
+}
+
+/*
+ * functions to get cookie and decrypt
+ */
+
+var (
+	errWrongSecurityCommand   = errors.New("wrong security command")
+	errCouldNotFindInKeychain = errors.New("could not be find in keychain")
+)
+
+func GetMasterKey() ([]byte, error) {
+	var (
+		cmd            *exec.Cmd
+		stdout, stderr bytes.Buffer
+	)
+	// don't need chromium key file for macOS
+	// defer os.Remove(item.TempChromiumKey)
+	// Get the master key from the keychain
+	// $ security find-generic-password -wa 'Chrome'
+	cmd = exec.Command("security", "find-generic-password", "-wa", strings.TrimSpace("Chrome")) //nolint:gosec
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		return nil, err
+	}
+	if stderr.Len() > 0 {
+		if strings.Contains(stderr.String(), "could not be found") {
+			return nil, errCouldNotFindInKeychain
+		}
+		return nil, errors.New(stderr.String())
+	}
+	chromeSecret := bytes.TrimSpace(stdout.Bytes())
+	if chromeSecret == nil {
+		return nil, errWrongSecurityCommand
+	}
+	chromeSalt := []byte("saltysalt")
+	// @https://source.chromium.org/chromium/chromium/src/+/master:components/os_crypt/os_crypt_mac.mm;l=157
+	key := pbkdf2.Key(chromeSecret, chromeSalt, 1003, 16, sha1.New)
+	if key == nil {
+		return nil, errWrongSecurityCommand
+	}
+	return key, nil
+}
+
+func aes128CBCDecrypt(key, iv, encryptPass []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	encryptLen := len(encryptPass)
+	if encryptLen < block.BlockSize() {
+		return nil, errors.New("length of encrypted password less than block size")
+	}
+
+	dst := make([]byte, encryptLen)
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(dst, encryptPass)
+	dst = pkcs5UnPadding(dst, block.BlockSize())
+	return dst, nil
+}
+
+func pkcs5UnPadding(src []byte, blockSize int) []byte {
+	n := len(src)
+	paddingNum := int(src[n-1])
+	if n < paddingNum || paddingNum > blockSize {
+		return src
+	}
+	return src[:n-paddingNum]
 }
