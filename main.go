@@ -36,6 +36,11 @@ func handleMessage(c *websocket.Conn) bool {
     return true
 }
 
+var PROJECT_ID_MAP = map[string]string{
+    "weike": "1",
+    "dayou": "40",
+}
+
 func main() {
     log.SetFlags(0)
     conf := initConf()
@@ -51,6 +56,13 @@ func main() {
     refreshTokenFlag := flag.Bool("r", false, "刷新 token")
     source := flag.String("s", "", fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
     _type := flag.String("t", "api", "服务类型: api | script")
+    project := flag.String("p", "weike", "项目区分: weike | dayou")
+
+    projectId, getPidOK := PROJECT_ID_MAP[*project]
+    if (!getPidOK) {
+        log.Printf(`项目[ %v ]不存在，请检查\n`, *project)
+        os.Exit(1)
+    }
 
     flag.Parse()
     if len(os.Args) < 2 {
@@ -114,7 +126,7 @@ func main() {
         "timestamps=true",
         "prefix=false",
         "tailLines=" + *tailLines,
-        "proj_id=1",
+        "proj_id=" + projectId,
         "token=" + conf.User.Token,
         "namespace=" + curConf.Namespace,
         "label=app=" + curConf.Deployment + ",cicd_env=stable,name=" + curConf.Name + ",type=" + curConf.Type + ",version=stable",
