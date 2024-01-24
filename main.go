@@ -29,7 +29,9 @@ func handleMessage(c *websocket.Conn) bool {
     }
     messageStr := string(message)
     // 过滤一些无意义日志
-    if strings.Contains(messageStr, "Invalid HTTP request received.") || strings.Contains(messageStr, "GET /metrics HTTP") || strings.Contains(messageStr, "GET /health_check") {
+    if (strings.Contains(messageStr, "Invalid HTTP request received.") ||
+        strings.Contains(messageStr, "GET /metrics HTTP") ||
+        strings.Contains(messageStr, "/health_check")) {
         return true
     }
     log.Print(messageStr)

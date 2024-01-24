@@ -3,3 +3,4 @@ build
 kklog
 kklog.exe
 *.idea
+*.log
