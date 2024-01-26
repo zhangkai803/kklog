@@ -21,7 +21,7 @@ func getAllSources(c *Conf) []string {
     return sources
 }
 
-func handleMessage(c *websocket.Conn) bool {
+func handleMessage(c *websocket.Conn, env *Env) bool {
     _, message, err := c.ReadMessage()
     if err != nil {
         log.Println("read:", err)
@@ -34,7 +34,7 @@ func handleMessage(c *websocket.Conn) bool {
         strings.Contains(messageStr, "/health_check")) {
         return true
     }
-    log.Print(messageStr)
+    log.Print("[", env.Deployment, "] [", env.Namespace, "] ", messageStr)
     return true
 }
 
@@ -168,7 +168,7 @@ func main() {
     go func() {
         defer close(done)
         for {
-            r := handleMessage(c)
+            r := handleMessage(c, curConf)
             if !r {
                 break
             }
