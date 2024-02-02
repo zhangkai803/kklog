@@ -41,6 +41,7 @@ func handleMessage(c *websocket.Conn, env *Env) bool {
 var PROJECT_ID_MAP = map[string]string{
     "weike": "1",
     "dayou": "40",
+    "oc": "41",
 }
 
 func main() {
@@ -59,12 +60,6 @@ func main() {
     source := flag.String("s", "", fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
     _type := flag.String("t", "api", "服务类型: api | script")
     project := flag.String("p", "weike", "项目区分: weike | dayou")
-
-    projectId, getPidOK := PROJECT_ID_MAP[*project]
-    if (!getPidOK) {
-        log.Printf(`项目[ %v ]不存在，请检查\n`, *project)
-        os.Exit(1)
-    }
 
     flag.Parse()
     if len(os.Args) < 2 {
@@ -118,6 +113,15 @@ func main() {
     }
     if curConf.Type == "" {
         curConf.Type = *_type
+    }
+    if *project != "" {
+        curConf.Project = *project
+    }
+
+    projectId, getPidOK := PROJECT_ID_MAP[curConf.Project]
+    if (!getPidOK) {
+        log.Printf(`项目[ %v ]不存在，请检查\n`, curConf.Project)
+        os.Exit(1)
     }
 
     // 组装地址

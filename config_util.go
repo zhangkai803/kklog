@@ -36,11 +36,12 @@ type User struct {
 }
 
 type Env struct {
-    Source     string `yaml:"source" desc:"自定义配置名"`
-    Deployment string `yaml:"deployment" desc:"服务名称"`
-    Name       string `yaml:"name" desc:"POD 名称"`
-    Namespace  string `yaml:"namespace" desc:"命名空间"`
-    Type       string `yaml:"type" desc:"服务类型[api/script]"`
+    Source          string `yaml:"source" desc:"自定义配置名"`
+    Project         string `yaml:"project" desc:"所属项目[weike/dayou]" default:"weike"`
+    Deployment      string `yaml:"deployment" desc:"服务名称"`
+    Type            string `yaml:"type" desc:"服务类型[api/script]"`
+    Name            string `yaml:"name" desc:"POD 名称"`
+    Namespace       string `yaml:"namespace" desc:"命名空间"`
 }
 
 type Conf struct {
@@ -60,16 +61,18 @@ user:
 
 envs:
     -
-        source: wk_tag_manage               // 日志来源，自定义
+        source: wk_tag_manage              // 日志来源，自定义
+        project: weike                     // 项目名
         deployment: wk-tag-manage          // deployment 名
-        name: wk-tag-manage                // pod 名
         type: api                          // api [服务] or script[脚本]
+        name: wk-tag-manage                // pod 名
         namespace: dev1                    // 命名空间
     -
         source: tag-record-subscriber
+        project: weike
         deployment: wk-tag-manage
-        name: wk-tag-manage-tag-record-subscriber
         type: script
+        name: wk-tag-manage-tag-record-subscriber
         namespace: dev1
 
 # 此处配置默认抓取的日志来源 为空默认为envs[0]
@@ -88,19 +91,22 @@ envs:
     -
         # 别名
         source: wtm_server
+        # 所属项目
+        project: weike
         # 服务名
         deployment: wk-tag-manage
-        # pod 名
-        name: wk-tag-manage
         # pod 类型
         type: api
+        # pod 名
+        name: wk-tag-manage
         # 命名空间
         namespace: dev1
     -
         source: wtm_scriber
+        project: weike
         deployment: wk-tag-manage
-        name: wk-tag-manage-subscriber
         type: script
+        name: wk-tag-manage-subscriber
         namespace: dev1
 
 # 此处配置默认抓取的日志来源 为空默认为envs[0]
@@ -189,7 +195,9 @@ func refreshToken() {
         fmt.Println("Not Supported.")
         os.Exit(-1)
     }
-    db, err := sql.Open("sqlite3", "/Users/k/Library/Application Support/Google/Chrome/Profile 1/Cookies")
+    homeDir, _ := os.UserHomeDir()
+    db, err := sql.Open("sqlite3", homeDir + "/Library/Application Support/Google/Chrome/Default/Cookies")
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -212,7 +220,7 @@ func refreshToken() {
         if err != nil {
             log.Fatal(err)
         }
-        value, err := aes128CBCDecrypt(key, iv, encrypted_value[3:])
+        value, _ := aes128CBCDecrypt(key, iv, encrypted_value[3:])
         token = string(value)
 	}
     conf := GetConf()
