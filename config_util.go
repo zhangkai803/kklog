@@ -196,7 +196,11 @@ func refreshToken() {
         os.Exit(-1)
     }
     homeDir, _ := os.UserHomeDir()
-    db, err := sql.Open("sqlite3", homeDir + "/Library/Application Support/Google/Chrome/Default/Cookies")
+    dbPath := homeDir + "/Library/Application Support/Google/Chrome/Default/Cookies"
+    if _, err := os.Stat("/path/to/whatever"); errors.Is(err, os.ErrNotExist) {
+        dbPath = homeDir + "/Library/Application Support/Google/Chrome/Profile 1/Cookies"
+    }
+    db, err := sql.Open("sqlite3", dbPath)
 
 	if err != nil {
 		log.Fatal(err)
