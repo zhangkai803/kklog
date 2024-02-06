@@ -37,7 +37,7 @@ type User struct {
 
 type Env struct {
     Source          string `yaml:"source" desc:"自定义配置名"`
-    Project         string `yaml:"project" desc:"所属项目[weike/dayou]" default:"weike"`
+    Project         string `yaml:"project" desc:"所属项目[weike/dayou/oc]"`
     Deployment      string `yaml:"deployment" desc:"服务名称"`
     Type            string `yaml:"type" desc:"服务类型[api/script]"`
     Name            string `yaml:"name" desc:"POD 名称"`

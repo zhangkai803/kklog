@@ -52,14 +52,14 @@ func main() {
     addEnvFlag := flag.Bool("a", false, "新增项目")
     deployment := flag.String("d", "", "项目名")
     debug := flag.Bool("debug", false, "DEBUG: 输出 WSS 路径但不进行连接")
-    env := flag.String("e", "dev", "环境选择: dev | prod")
-    tailLines := flag.String("l", "500", "tail行数: 500 | 1000 | 2000]")
+    env := flag.String("e", "dev", "集群选择: dev | prod | prod-tokyo")
+    tailLines := flag.String("l", "500", "tail行数: 500 | 1000 | 2000")
     name := flag.String("n", "", "服务名")
     namespace := flag.String("ns", "", "命名空间：如 dev1")
     refreshTokenFlag := flag.Bool("r", false, "刷新 token")
     source := flag.String("s", "", fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
     _type := flag.String("t", "api", "服务类型: api | script")
-    project := flag.String("p", "weike", "项目区分: weike | dayou")
+    project := flag.String("p", "weike", "项目区分: weike | dayou | oc")
 
     flag.Parse()
     if len(os.Args) < 2 {
@@ -114,6 +114,11 @@ func main() {
     if curConf.Type == "" {
         curConf.Type = *_type
     }
+
+    if curConf.Project == "" {
+        log.Printf(`[%v] 还未配置所属项目，请更新配置文件或用 -p 指定，如已指定请忽略。\n`, curConf.Source)
+    }
+
     if *project != "" {
         curConf.Project = *project
     }
