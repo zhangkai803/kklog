@@ -21,14 +21,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var (
-	SALT       = "saltysalt"
-	ITERATIONS = 1003
-	KEYLENGTH  = 16
-)
-
 const ConfigPath = "/.kkconf.yaml"
-const TokenRefreshUrl = "https://value.weike.fm/login"
 
 type User struct {
     Name  string `yaml:"name"`
