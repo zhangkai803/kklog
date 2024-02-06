@@ -24,7 +24,7 @@ func getAllSources(c *Conf) []string {
 func handleMessage(c *websocket.Conn, env *Env) bool {
     _, message, err := c.ReadMessage()
     if err != nil {
-        log.Println("read:", err)
+        log.Println(Red, "read error:", err, Reset)
         return false
     }
     messageStr := string(message)
@@ -34,7 +34,7 @@ func handleMessage(c *websocket.Conn, env *Env) bool {
         strings.Contains(messageStr, "/health_check")) {
         return true
     }
-    log.Print("[", env.Deployment, "] [", env.Namespace, "] ", messageStr)
+    log.Print("[", Green, env.Deployment, Reset, "] [", Cyan, env.Namespace, Reset, "] ", messageStr)
     return true
 }
 

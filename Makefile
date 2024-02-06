@@ -4,7 +4,7 @@ build:
 	@go build -o ./build/kklog *.go
 
 run:
-	@go run main.go config_util.go
+	@go run main.go config_util.go color.go
 
 clean:
 	@rm ./kklog
