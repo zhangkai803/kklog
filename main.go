@@ -32,6 +32,7 @@ func handleMessage(c *websocket.Conn, env *Env) bool {
     if (strings.Contains(messageStr, "Invalid HTTP request received.") ||
         strings.Contains(messageStr, "GET /metrics HTTP") ||
         strings.Contains(messageStr, "/health_check")) {
+        fmt.Print(".\r")
         return true
     }
     log.Print("[", Green, env.Deployment, Reset, "] [", Cyan, env.Namespace, Reset, "] ", messageStr)
