@@ -77,6 +77,11 @@ func main() {
         os.Exit(0)
     }
 
+    if conf.User.Token == "" {
+        log.Fatal("未找到有效的 token，请先登录效能平台 https://value.weike.fm 再执行 kklog -r 注入 token")
+        os.Exit(1)
+    }
+
     // 监听主动退出信号
     interrupt := make(chan os.Signal, 1)
     signal.Notify(interrupt, os.Interrupt)
