@@ -139,6 +139,11 @@ func GetConf() *Conf {
 
 func initConf() *Conf {
     conf := GetConf()
+    if conf.User.Token == "" {
+        log.Fatal("未找到有效的 token，请先登录效能平台 https://value.weike.fm 再执行 kklog -r 注入 token")
+        os.Exit(1)
+    }
+
     envMap := map[string]*Env{}
     for _, e := range conf.Envs {
         envMap[e.Source] = e
