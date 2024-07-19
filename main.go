@@ -21,10 +21,10 @@ func getAllSources(c *Conf) []string {
     return sources
 }
 
-func handleMessage(c *websocket.Conn, env *Env) bool {
+func handleMessage(c *websocket.Conn, env *Env, grep string) bool {
     _, message, err := c.ReadMessage()
     if err != nil {
-        log.Println(Red, "read error:", err, Reset)
+        log.Println(WrapColor(fmt.Sprintf("read error: %v", err), Red))
         return false
     }
     messageStr := string(message)
@@ -35,7 +35,16 @@ func handleMessage(c *websocket.Conn, env *Env) bool {
         fmt.Print(".\r")
         return true
     }
-    log.Print("[", Green, env.Deployment, Reset, "] [", Cyan, env.Namespace, Reset, "] ", messageStr)
+
+    // 如果有检索内容 不匹配的内容就不会输出 且检索到的内容会高亮
+    if grep != "" {
+        if strings.Contains(messageStr, grep) {
+            messageStr = strings.ReplaceAll(messageStr, grep, WrapColor(grep, Yellow))
+            log.Print("[", WrapColor(env.Deployment, Green), "] [", WrapColor(env.Namespace, Cyan), "] ", messageStr)
+        }
+    } else {
+        log.Print("[", WrapColor(env.Deployment, Green), "] [", WrapColor(env.Namespace, Cyan), "] ", messageStr)
+    }
     return true
 }
 
@@ -61,6 +70,7 @@ func main() {
     source := flag.String("s", "", fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
     _type := flag.String("t", "api", "服务类型: api | script")
     project := flag.String("p", "weike", "项目区分: weike | dayou | oc")
+    grep := flag.String("g", "", "日志内容检索")
 
     flag.Parse()
     if len(os.Args) < 2 {
@@ -151,7 +161,7 @@ func main() {
 
     var link = `wss://value.weike.fm/ws/api/k8s/` + *env + `/pods/log`
     link += "?" + strings.Join(args, "&")
-    log.Printf("Connecting:[%s]\nNamespace:[%s]\nLink:[%s]", Green + curConf.Name + Reset, Cyan + curConf.Namespace + Reset, Blue + link + Reset)
+    log.Printf("Connecting:[%s]\nNamespace:[%s]\nLink:[%s]", WrapColor(curConf.Name, Green), WrapColor(curConf.Namespace, Cyan), WrapColor(link, Blue))
     // 建立 ws 连接
     c, resp, err := websocket.DefaultDialer.Dial(link, nil)
     if err != nil {
@@ -183,7 +193,7 @@ func main() {
     go func() {
         defer close(done)
         for {
-            r := handleMessage(c, curConf)
+            r := handleMessage(c, curConf, *grep)
             if !r {
                 break
             }

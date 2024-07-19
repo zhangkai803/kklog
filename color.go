@@ -25,3 +25,7 @@ func init() {
 		White  = ""
 	}
 }
+
+func WrapColor(msg string, color string) string {
+	return color + msg + Reset
+}
