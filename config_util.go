@@ -221,6 +221,14 @@ func refreshToken() {
         }
         value, _ := aes128CBCDecrypt(key, iv, encrypted_value[3:])
         token = string(value)
+
+        // Somehow the decrypted value has a unknow prefix
+        // So, if token doesn't startswith "eyJ", it means the token is not valid
+        // We should deal with the unknow prefix
+        if !strings.HasPrefix(token, "eyJ") {
+            splited := strings.SplitN(token, "eyJ", 2)
+            token = "eyJ" + splited[1]
+        }
 	}
     conf := GetConf()
     conf.User.Token = token
