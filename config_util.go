@@ -29,7 +29,7 @@ type User struct {
     Token string `yaml:"token"`
 }
 
-type Env struct {
+type Source struct {
     Source          string `yaml:"source" desc:"自定义配置名"`
     Project         string `yaml:"project" desc:"所属项目[weike/dayou/oc]"`
     Deployment      string `yaml:"deployment" desc:"服务名称"`
@@ -40,8 +40,8 @@ type Env struct {
 
 type Conf struct {
     User   *User  `yaml:"user"`
-    Envs   []*Env `yaml:"sources"`
-    EnvMap map[string]*Env
+    Sources   []*Source `yaml:"sources"`
+    EnvMap map[string]*Source
     DefaultSource string `yaml:"default_source"`
 }
 
@@ -53,7 +53,7 @@ user:
     name: 自定义
     token: 效能平台 token                   // 有效期 7 天，如果无法正常获取日志请尝试更换
 
-envs:
+sources:
     -
         source: wk_tag_manage              // 日志来源，自定义
         project: weike                     // 项目名
@@ -81,7 +81,7 @@ user:
     token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6ODksImV4cCI6MTY3Mzg0OTY5N30.M_a_wh0WgaX24XEBteKILW_W4Siaqoep5QZwWZdvt9Y
 
 # 此处配置日志来源 注意列表格式
-envs:
+sources:
     -
         # 别名
         source: wtm_server
@@ -140,8 +140,8 @@ func GetConf() *Conf {
 func initConf() *Conf {
     conf := GetConf()
 
-    envMap := map[string]*Env{}
-    for _, e := range conf.Envs {
+    envMap := map[string]*Source{}
+    for _, e := range conf.Sources {
         envMap[e.Source] = e
     }
 
@@ -155,12 +155,12 @@ func handleError(err error) {
         os.Exit(-1)
     }
 }
-func addEnv() {
+func addSource() {
     conf := GetConf()
-    env := Env{}
-    var typeInfo = reflect.TypeOf(env)
+    source := Source{}
+    var typeInfo = reflect.TypeOf(source)
     num := typeInfo.NumField()
-    s := reflect.ValueOf(&env).Elem() // 反射获取测试对象对应的struct枚举类型
+    s := reflect.ValueOf(&source).Elem() // 反射获取测试对象对应的struct枚举类型
 
     for i := 0; i < num; i++ {
         field := typeInfo.Field(i)
@@ -170,18 +170,18 @@ func addEnv() {
         handleError(err)
         s.Field(i).SetString(v)
     }
-    for i := range conf.Envs {
-        if conf.Envs[i].Source == env.Source {
-            fmt.Printf(`Source %s already exists!\n`, env.Source)
+    for i := range conf.Sources {
+        if conf.Sources[i].Source == source.Source {
+            fmt.Printf(`Source %s already exists!\n`, source.Source)
             os.Exit(-1)
         }
     }
-    conf.Envs = append(conf.Envs, &env)
+    conf.Sources = append(conf.Sources, &source)
     marshal, err := yaml.Marshal(conf)
     handleError(err)
     err = os.WriteFile(getHome()+ConfigPath, marshal, 0777)
     handleError(err)
-    fmt.Printf("Successfully added %s!\n", env.Name)
+    fmt.Printf("Successfully added %s!\n", source.Name)
 }
 
 func refreshToken() {

@@ -15,13 +15,13 @@ import (
 
 func getAllSources(c *Conf) []string {
     sources := make([]string, 0)
-    for k := range c.Envs {
-        sources = append(sources, c.Envs[k].Source)
+    for k := range c.Sources {
+        sources = append(sources, c.Sources[k].Source)
     }
     return sources
 }
 
-func handleMessage(c *websocket.Conn, env *Env, grep string) bool {
+func handleMessage(c *websocket.Conn, source *Source, grep string) bool {
     _, message, err := c.ReadMessage()
     if err != nil {
         log.Println(WrapColor(fmt.Sprintf("read error: %v", err), Red))
@@ -40,10 +40,10 @@ func handleMessage(c *websocket.Conn, env *Env, grep string) bool {
     if grep != "" {
         if strings.Contains(messageStr, grep) {
             messageStr = strings.ReplaceAll(messageStr, grep, WrapColor(grep, Yellow))
-            log.Print("[", WrapColor(env.Deployment, Green), "] [", WrapColor(env.Namespace, Cyan), "] ", messageStr)
+            log.Print("[", WrapColor(source.Deployment, Green), "] [", WrapColor(source.Namespace, Cyan), "] ", messageStr)
         }
     } else {
-        log.Print("[", WrapColor(env.Deployment, Green), "] [", WrapColor(env.Namespace, Cyan), "] ", messageStr)
+        log.Print("[", WrapColor(source.Deployment, Green), "] [", WrapColor(source.Namespace, Cyan), "] ", messageStr)
     }
     return true
 }
@@ -67,7 +67,7 @@ func main() {
     name := flag.String("n", "", "服务名")
     namespace := flag.String("ns", "", "命名空间：如 dev1")
     refreshTokenFlag := flag.Bool("r", false, "刷新 token")
-    source := flag.String("s", "", fmt.Sprintf(`日志来源，即配置文件中的别名/Source of env in $HOME/.kkconfig.yaml %v`, sources))
+    source := flag.String("s", "", fmt.Sprintf(`日志来源，即配置文件中的别名/Source of source in $HOME/.kkconfig.yaml %v`, sources))
     _type := flag.String("t", "api", "服务类型: api | script")
     project := flag.String("p", "weike", "项目区分: weike | dayou | oc")
     grep := flag.String("g", "", "日志内容检索")
@@ -79,7 +79,7 @@ func main() {
     }
 
     if *addEnvFlag {
-        addEnv()
+        addSource()
         os.Exit(0)
     }
 
@@ -104,44 +104,44 @@ func main() {
     ticker := time.NewTicker(time.Second)
     defer ticker.Stop()
 
-    var curConf *Env
+    var curSource *Source
     var ok bool
     if len(*source) > 0 {
         // 传入日志源
-        curConf, ok = conf.EnvMap[*source]
+        curSource, ok = conf.EnvMap[*source]
         if !ok {
             log.Printf(`日志来源[ %v ]未定义，请检查\n`, *source)
             os.Exit(0)
         }
     } else {
         // 未传日志源
-        curConf = &Env{}
+        curSource = &Source{}
     }
 
     if *namespace != "" {
-        curConf.Namespace = *namespace
+        curSource.Namespace = *namespace
     }
     if *deployment != "" {
-        curConf.Deployment = *deployment
+        curSource.Deployment = *deployment
     }
     if *name != "" {
-        curConf.Name = *name
+        curSource.Name = *name
     }
-    if curConf.Type == "" {
-        curConf.Type = *_type
+    if curSource.Type == "" {
+        curSource.Type = *_type
     }
 
-    if curConf.Project == "" {
-        log.Printf(`[%v] 还未配置所属项目，请更新配置文件或用 -p 指定，如已指定请忽略。\n`, curConf.Source)
+    if curSource.Project == "" {
+        log.Printf(`[%v] 还未配置所属项目，请更新配置文件或用 -p 指定，如已指定请忽略。\n`, curSource.Source)
     }
 
     if *project != "" {
-        curConf.Project = *project
+        curSource.Project = *project
     }
 
-    projectId, getPidOK := PROJECT_ID_MAP[curConf.Project]
+    projectId, getPidOK := PROJECT_ID_MAP[curSource.Project]
     if (!getPidOK) {
-        log.Printf(`项目[ %v ]不存在，请检查\n`, curConf.Project)
+        log.Printf(`项目[ %v ]不存在，请检查\n`, curSource.Project)
         os.Exit(1)
     }
 
@@ -155,13 +155,13 @@ func main() {
         "tailLines=" + *tailLines,
         "proj_id=" + projectId,
         "token=" + conf.User.Token,
-        "namespace=" + curConf.Namespace,
-        "label=app=" + curConf.Deployment + ",cicd_env=stable,name=" + curConf.Name + ",type=" + curConf.Type + ",version=stable",
+        "namespace=" + curSource.Namespace,
+        "label=app=" + curSource.Deployment + ",cicd_env=stable,name=" + curSource.Name + ",type=" + curSource.Type + ",version=stable",
     }
 
     var link = `wss://value.weike.fm/ws/api/k8s/` + *env + `/pods/log`
     link += "?" + strings.Join(args, "&")
-    log.Printf("Connecting:[%s]\nNamespace:[%s]\nLink:[%s]", WrapColor(curConf.Name, Green), WrapColor(curConf.Namespace, Cyan), WrapColor(link, Blue))
+    log.Printf("Connecting:[%s]\nNamespace:[%s]\nLink:[%s]", WrapColor(curSource.Name, Green), WrapColor(curSource.Namespace, Cyan), WrapColor(link, Blue))
     // 建立 ws 连接
     c, resp, err := websocket.DefaultDialer.Dial(link, nil)
     if err != nil {
@@ -193,7 +193,7 @@ func main() {
     go func() {
         defer close(done)
         for {
-            r := handleMessage(c, curConf, *grep)
+            r := handleMessage(c, curSource, *grep)
             if !r {
                 break
             }

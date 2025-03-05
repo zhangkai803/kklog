@@ -16,7 +16,7 @@
         name: kk            # 用户名 自定义
         token: xxx.yyy.zzz  # 效能平台 token 7 天有效，暂时未做自动更新，到期需手动替换
 
-    envs:
+    sources:
         -
             source: wk_tag_manage
             deployment: wk-tag-manage
