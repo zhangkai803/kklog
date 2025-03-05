@@ -38,11 +38,23 @@ type Source struct {
     Namespace       string `yaml:"namespace" desc:"命名空间"`
 }
 
+type Pod struct {
+    Name string `yaml:"name"`
+    Type string `yaml:"type"`
+}
+
 type Conf struct {
+    // common fields
     User   *User  `yaml:"user"`
+    // fields for kklog self
     Sources   []*Source `yaml:"sources"`
     EnvMap map[string]*Source
     DefaultSource string `yaml:"default_source"`
+    // fields for kklogIced
+    Envs []string `yaml:"envs"`
+    Namespaces []string `yaml:"namespaces"`
+    Deployments []string `yaml:"deployments"`
+    Pods map[string][]*Pod `yaml:"pods"`
 }
 
 var fileFormatTip string = `
