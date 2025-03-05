@@ -40,7 +40,7 @@ type Env struct {
 
 type Conf struct {
     User   *User  `yaml:"user"`
-    Envs   []*Env `yaml:"envs"`
+    Envs   []*Env `yaml:"sources"`
     EnvMap map[string]*Env
     DefaultSource string `yaml:"default_source"`
 }
